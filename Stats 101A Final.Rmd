@@ -1,0 +1,198 @@
+---
+title: "Stats 101A Final"
+author: "Angela Luo"
+date: "2025-02-28"
+output: html_document
+---
+```{r}
+housing <- read.csv("Housing.csv")
+head(housing)
+```
+```{r}
+# Price ~ Area, Bedrooms, Bathrooms, Stories, Parking
+# Disregarding variables that are "yes/no"
+housing <- subset(housing, select = -c(mainroad, guestroom, basement, hotwaterheating, airconditioning, prefarea, furnishingstatus))
+head(housing)
+attach(housing)
+```
+
+## Data Description
+```{r}
+## summary stats 
+summary(housing)
+
+## mean
+sapply(housing, mean, na.rm = TRUE)
+
+## standard deviation 
+sapply(housing, sd, na.rm = TRUE)
+
+## variable  price          area          bedrooms      bathrooms     stories       parking  
+## mean      4.766729e+06   5.150541e+03  2.965138e+00  1.286239e+00  1.805505e+00  6.935780e-01
+## sd        1.870440e+06   2.170141e+03  7.380639e-01  5.024696e-01  8.674925e-01  8.615858e-01
+
+## distribution of variables 
+par(mfrow = c(2, 3))  
+hist(price, col = "lightblue",
+     main = "Distribution of Price", xlab = "Price")
+hist(area, col = "pink",
+     main = "Distribution of Area", xlab = "Area")
+hist(bedrooms, col = "pink",
+     main = "Distribution of Bedrooms", xlab = "Bedrooms")
+hist(bathrooms, col = "pink",
+     main = "Distribution of Bathrooms", xlab = "Bathrooms")
+hist(stories, col = "pink",
+     main = "Distribution of Stories", xlab = "Stories")
+hist(parking, col = "pink",
+     main = "Distribution of Parking", xlab = "Parking")
+
+## scatterplot correlation matrix 
+plot(housing)
+
+## scatterplot of price ~ area 
+plot(price, area, 
+     main = "Scatterplot of Price vs Area", 
+     xlab = "Price", ylab = "Area", 
+     pch = 21)
+# there is heteroscedasticity
+```
+
+## Results and Interpretation
+```{r}
+## fit the full model using original variables
+model <- lm(data = housing, price ~ .)
+summary(model)
+## R^2 = 0.5805
+## ANOVA p-value: < 2.2e-16
+
+## diagnostic plots of the full model
+par(mfrow=c(2,2))
+plot(model)
+
+## leverage points
+## which(hatvalues(model) > 2 * 5/length(price))
+length(which(hatvalues(model) > 2 * 5/length(price)))
+
+## outliers 
+## which(abs(rstandard(model)) > 2)
+length(which(abs(rstandard(model)) > 2))
+
+## influential points
+## which(cooks.distance(model) > 4 / (length(price) - 2) )
+length(which(cooks.distance(model) > 4 / (length(price) - 2) ))
+
+## model transformation
+library(car)
+summary(tranxy <- powerTransform(cbind(price,area,bedrooms,bathrooms,stories)~1))
+
+## transformed model 
+m1 <- lm(log(price) ~ log(area)+bedrooms+bathrooms+stories+parking, data = housing)
+
+## fit the transformed model 
+summary(m1)
+
+## diagnostic plots of transformed model 
+par(mfrow=c(2,2))
+plot(m1)
+
+## VIF 
+vif(m1)
+
+## added variable plots 
+par(mfrow=c(2,3))
+avPlot(m1, variable = 'log(area)', ask = FALSE)
+avPlot(m1, variable = 'bedrooms', ask = FALSE)
+avPlot(m1, variable = 'bathrooms', ask = FALSE)
+avPlot(m1, variable = 'stories', ask = FALSE)
+avPlot(m1, variable = 'parking', ask = FALSE)
+
+## model selection 
+n_m2 <- nrow(housing)
+p_m2 <- length(m1$coefficients) - 1
+
+## consider all possible subsets
+library(leaps)
+X <- cbind(log(area), bedrooms, bathrooms, stories, parking)
+b <- regsubsets(as.matrix(X), log(housing$price))
+summary(b)
+
+## subset size p = 1
+om1 <- lm(log(housing$price) ~ log(area))
+## adjusted R2
+(Rad1 <- summary(om1)$adj.r.squared)
+## AIC 
+(AIC1 <- extractAIC(om1)[2])
+## AICc 
+(AICc1 <- extractAIC(om1)[2]+2*(p_m2 + 2)*(p_m2 + 3)/(n_m2 - p_m2 - 1))
+## BIC 
+(BIC1 <- extractAIC(om1, k=log(n_m2))[2])
+
+## subset size p = 2
+om2 <- lm(log(housing$price) ~ log(area) + bathrooms)
+## adjusted R2
+(Rad2 <- summary(om2)$adj.r.squared)
+## AIC 
+(AIC2 <- extractAIC(om2)[2])
+## AICc 
+(AICc2 <- extractAIC(om2)[2]+2*(p_m2 + 2)*(p_m2 + 3)/(n_m2 - p_m2 - 1))
+## BIC 
+(BIC2 <- extractAIC(om2, k=log(n_m2))[2])
+
+## subset size p = 3
+om3 <- lm(log(housing$price) ~ log(area) + bathrooms + stories)
+## adjusted R2
+(Rad3 <- summary(om3)$adj.r.squared)
+## AIC 
+(AIC3 <- extractAIC(om3)[2])
+## AICc 
+(AICc3 <- extractAIC(om3)[2]+2*(p_m2 + 2)*(p_m2 + 3)/(n_m2 - p_m2 - 1))
+## BIC 
+(BIC3 <- extractAIC(om3, k=log(n_m2))[2])
+
+## subset size p = 4
+om4 <- lm(log(housing$price) ~ log(area) + bathrooms + stories + parking)
+## adjusted R2
+(Rad4 <- summary(om4)$adj.r.squared)
+## AIC 
+(AIC4 <- extractAIC(om4)[2])
+## AICc 
+(AICc4 <- extractAIC(om4)[2]+2*(p_m2 + 2)*(p_m2 + 3)/(n_m2 - p_m2 - 1))
+## BIC 
+(BIC4 <- extractAIC(om4, k=log(n_m2))[2])
+
+## subset size p = 5
+om5 <- lm(log(housing$price) ~ log(area) + bathrooms + stories + parking + bedrooms)
+## adjusted R2
+(Rad5 <- summary(om5)$adj.r.squared)
+## AIC 
+(AIC5 <- extractAIC(om5)[2])
+## AICc 
+(AICc5 <- extractAIC(om5)[2]+2*(p_m2 + 2)*(p_m2 + 3)/(n_m2 - p_m2 - 1))
+## BIC 
+(BIC5 <- extractAIC(om5, k=log(n_m2))[2])
+
+##    Size     Radj2        AIC         AICc        BIG
+## 1    1      0.3352771    -1297.949   -1297.741   -1299.176
+## 2    2      0.4759348    -1426.529   -1426.321   -1428.37
+## 3    3      0.5376248    -1493.791   -1493.583   -1496.246
+## 4    4      0.5564069    -1515.4     -1515.192   -1518.469
+## 5    5      0.5616289    -1520.864   -1520.656   -1524.546
+
+## highest Radj2: 0.5616289, p = 5
+## lowest AIC: -1520.864, p = 5
+## lowest AICc: -1520.656, p = 5
+## lowest BIG: -1524.546, p = 5
+
+summary(om5)
+
+## forward stepwise regression
+mint <- lm(log(price)~1,data=housing)
+forwardAIC <- step(mint, scope=list(lower=~1,
+                                    upper=~log(area) + bedrooms + bathrooms + stories + parking),
+                   direction="forward", data=housing)
+
+## backward stepwise regression
+backAIC <- step(m1, direction = 'backward', data=housing)
+```
+
+
