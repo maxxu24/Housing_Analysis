@@ -16,8 +16,7 @@ This project applies multiple linear regression analysis to predict housing pric
 - The final model demonstrated improved residual behavior and predictive reliability.  
 
 ## **Technologies Used**
-- Python (`pandas`, `numpy`, `statsmodels`, `matplotlib`, `seaborn`)  
-- Jupyter Notebook  
+- R (`car`, `leaps`)  
 
 ## **Portfolio Relevance**
 This project showcases my ability to conduct statistical modeling, interpret regression diagnostics, and refine predictive models through data-driven decision-making. It demonstrates key skills in regression analysis, statistical inference, and data visualization, relevant to roles in data science, financial analytics, and sports analytics.  
